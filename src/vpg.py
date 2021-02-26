@@ -108,11 +108,16 @@ for episode in range(100000):
 
     # preprocess rewards
     rewards = np.array(rewards)
-    # calculate rewards to go for less variance    
-    #R = torch.tensor([np.sum(rewards[i:]*(gamma**np.array(range(i, len(rewards))))) for i in range(len(rewards))])
+    
+    #one line calculation of discounted rewards. credits: https://github.com/lbarazza/VPG-PyTorch/blob/master/vpg.py
+    #use very high gamma (.98,1]
     R = torch.tensor([np.sum(rewards[i:]*(gamma**np.array(range(0, len(rewards) - i)))) for i in range(len(rewards))])
     R = R.cuda()  
-    #reward_code = 'torch.sum(torch.tensor(rewards))'
+
+    # =====equivalent equation when gamme equal to one=============================
+    #     R = torch.tensor([np.sum(rewards[i:]) for i in range(len(rewards))])
+    #     R = R.cuda() 
+    # =============================================================================
 
     # preprocess states and actions
     states  = states.float().cuda()
@@ -121,8 +126,12 @@ for episode in range(100000):
     # calculate gradient
     probs = net(states)
     sampler = Categorical(probs)
-    log_probs = -sampler.log_prob(actions)   # "-" because it was built to work with gradient descent, but we are using gradient ascent
-    pseudo_loss = torch.sum(log_probs * R) # loss that when differentiated with autograd gives the gradient of J(θ)
+    
+    #VPG loss calculation
+    log_probs   = -sampler.log_prob(actions)   
+    pseudo_loss = torch.sum(log_probs * R)    
+    
+    
     # update policy weights
     optimizer.zero_grad()
     pseudo_loss.backward()
