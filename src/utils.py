@@ -35,17 +35,22 @@ def get_experience(experience):
             Tensor([i[1] for i in experience]),           #actions
             [i[2] for i in experience])           #rewards
 
-def play_game(model_path = 'models/VPG/4e5dab8860.pt', n = 5):
+def play_game(model_path = 'models/VPG/4e5dab8860.pt', 
+              n = 5,
+              gif = False):
     """ cd into src folder and then call this"""
     
     import gym
     import torch    
     from model import LunarLander    
     from torch.distributions import Categorical
+    from array2gif import write_gif
     
     net =  torch.load(model_path)
     
     env = gym.make('LunarLander-v2')
+    
+    frames = []
     
     for _ in range(n):
     
@@ -56,8 +61,10 @@ def play_game(model_path = 'models/VPG/4e5dab8860.pt', n = 5):
         #play and collect experience
         while not done:
             
-            env.render()
-            
+            if gif:
+                frames.append(env.render(mode="rgb_array")) #.transpose(1,0,2)
+            else:
+                env.render()
             #get network output (policy)
             net.eval()
             tensored_state = torch.Tensor(state.reshape((1,8))).cuda()
@@ -76,3 +83,13 @@ def play_game(model_path = 'models/VPG/4e5dab8860.pt', n = 5):
             state = new_state
         
     env.close()
+    
+# =============================================================================
+    if gif:
+        
+         frames_     = [i.transpose(1,0,2) for i in frames[::25] ] #gif maker likes it this way
+         model_name = model_path.split('/')[-1][:-3]
+         write_gif(frames_,f"gifs/{model_name}.gif",
+               fps = 1000)
+# =============================================================================
+    return frames
