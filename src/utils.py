@@ -34,3 +34,45 @@ def get_experience(experience):
     return (Tensor([i[0] for i in experience]), #states
             Tensor([i[1] for i in experience]),           #actions
             [i[2] for i in experience])           #rewards
+
+def play_game(model_path = 'models/VPG/4e5dab8860.pt', n = 5):
+    """ cd into src folder and then call this"""
+    
+    import gym
+    import torch    
+    from model import LunarLander    
+    from torch.distributions import Categorical
+    
+    net =  torch.load(model_path)
+    
+    env = gym.make('LunarLander-v2')
+    
+    for _ in range(n):
+    
+        state = env.reset()
+        done  = False
+        experience = [] #(S,A,R)
+        
+        #play and collect experience
+        while not done:
+            
+            env.render()
+            
+            #get network output (policy)
+            net.eval()
+            tensored_state = torch.Tensor(state.reshape((1,8))).cuda()
+            net_out = net(tensored_state)
+            
+            #sample from policy
+            action  = Categorical(net_out).sample()
+            
+            #step
+            new_state, reward, done, _ = env.step(action.item())
+            
+            #collect experience
+            experience.append((state, action, reward))
+            
+            #update state
+            state = new_state
+        
+    env.close()
