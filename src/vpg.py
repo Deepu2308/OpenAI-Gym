@@ -45,13 +45,13 @@ model_id  = str(binascii.b2a_hex(os.urandom(5)))[2:-1]
 perf = []
 buffer_size = 100
 returns = deque(maxlen=buffer_size)
-gamma = .99
+gamma = 1
 best_return = -np.inf
-reward_code = 'R = torch.tensor([np.sum(rewards[i:]*(gamma**np.array(range(i, len(rewards))))) for i in range(len(rewards))])'
+reward_code = 'R = torch.tensor([np.sum(rewards[i:]*(gamma**np.array(range(0, len(rewards) - i)))) for i in range(len(rewards))])'
 
 
 #start logging
-logging.basicConfig(filename='src/logs/vpg.log',
+logging.basicConfig(filename=f'src/logs/vpg_{model_id}.log',
                     filemode='a', 
                     format='%(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
@@ -109,7 +109,8 @@ for episode in range(100000):
     # preprocess rewards
     rewards = np.array(rewards)
     # calculate rewards to go for less variance    
-    R = torch.tensor([np.sum(rewards[i:]*(gamma**np.array(range(i, len(rewards))))) for i in range(len(rewards))])
+    #R = torch.tensor([np.sum(rewards[i:]*(gamma**np.array(range(i, len(rewards))))) for i in range(len(rewards))])
+    R = torch.tensor([np.sum(rewards[i:]*(gamma**np.array(range(0, len(rewards) - i)))) for i in range(len(rewards))])
     R = R.cuda()  
     #reward_code = 'torch.sum(torch.tensor(rewards))'
 
@@ -131,14 +132,13 @@ for episode in range(100000):
     returns.append(np.sum(rewards))
     
     mean_return_ = np.mean(returns)
+    append       = ''
     if best_return < mean_return_:
-        message = "Performance has improved. Saving model.\n"
-        print(message)
-        logging.info(message)
+        append = " \t Saving model."
         torch.save(net,f'src/models/VPG/{model_id}.pt')
         best_return = mean_return_
     
-    message = "Episode:{:5d} \t Avg_Return:{:4.4f}".format(episode, mean_return_)
+    message = "Episode:{:5d} \t Incumbent:{:4.4f}  Best: {:4.4f}".format(episode, mean_return_, best_return) + append
     logging.info(message)
     print(message)
 
