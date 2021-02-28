@@ -37,7 +37,7 @@ env = gym.make('LunarLander-v2')
 
 
 #Create net
-net_size  = 800
+net_size  = 50
 net       = LunarLander(net_size).cuda()
 optimizer = torch.optim.Adam(net.parameters())
 model_id  = str(binascii.b2a_hex(os.urandom(5)))[2:-1]
